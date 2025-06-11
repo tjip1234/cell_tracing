@@ -24,7 +24,7 @@ A comprehensive tool for cell image analysis and tracing using neural networks, 
 
 1. **Clone or download the project**:
    ```bash
-   git clone [<repository-url>(https://github.com/tjip1234/cell_tracing)
+   git clone https://github.com/tjip1234/cell_tracing
    cd cell_tracing
    ```
    
