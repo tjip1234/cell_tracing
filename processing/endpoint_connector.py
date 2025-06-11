@@ -137,7 +137,7 @@ class EndpointConnector(QThread):
         if length == 0:
             return None
             
-        return (dx / length, dy / length)
+        return (-dx / length, -dy / length)
         
     def is_in_search_cone(self, from_point, to_point, direction, cone_angle_degrees=120):
         """Check if to_point is within the search cone."""

@@ -1,0 +1,16 @@
+# GUI Framework
+PySide6
+
+# Image Processing
+numpy
+opencv-python
+scikit-image
+scipy
+Pillow
+
+# Machine Learning
+torch
+torchvision
+
+# Path handling
+pathlib

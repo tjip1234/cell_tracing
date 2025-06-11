@@ -1,7 +1,7 @@
 import numpy as np
 from PySide6.QtWidgets import QLabel, QScrollArea, QSizePolicy
 from PySide6.QtCore import Qt, Signal, QPoint, QRect
-from PySide6.QtGui import QPixmap, QImage, QPainter, QColor, QWheelEvent, QMouseEvent
+from PySide6.QtGui import QPixmap, QImage, QPainter, QColor, QWheelEvent, QMouseEvent, QPen
 
 class ImageViewer(QScrollArea):
     mouse_moved = Signal(QPoint)
@@ -31,6 +31,10 @@ class ImageViewer(QScrollArea):
         self.skeleton = None
         self.scale_factor = 1.0
         
+        # Zoom limits
+        self.min_scale = 0.1
+        self.max_scale = 10.0
+        
         # Display options
         self.show_original = True
         self.show_mask = True
@@ -39,7 +43,7 @@ class ImageViewer(QScrollArea):
         # Set placeholder
         self.set_placeholder()
         
-        print("ImageViewer: Initialized")
+        print("ImageViewer: Initialized with zoom capabilities")
         
     def set_placeholder(self):
         """Set placeholder text when no image is loaded"""
@@ -231,14 +235,39 @@ class ImageViewer(QScrollArea):
         if event.modifiers() == Qt.ControlModifier:
             # Zoom
             delta = event.angleDelta().y()
-            zoom_factor = 1.1 if delta > 0 else 1/1.1
+            zoom_factor = 1.15 if delta > 0 else 1/1.15
             
+            # Get mouse position for zoom center
+            mouse_pos = event.position().toPoint()
+            
+            # Store old scale and position
+            old_scale = self.scale_factor
+            
+            # Calculate new scale
             new_scale = self.scale_factor * zoom_factor
             new_scale = max(self.min_scale, min(self.max_scale, new_scale))
             
             if new_scale != self.scale_factor:
                 self.scale_factor = new_scale
+                
+                # Zoom towards mouse position
+                scroll_x = self.horizontalScrollBar().value()
+                scroll_y = self.verticalScrollBar().value()
+                
+                # Calculate zoom point relative to scroll area
+                zoom_x = mouse_pos.x() + scroll_x
+                zoom_y = mouse_pos.y() + scroll_y
+                
+                # Update display
                 self.update_display()
+                
+                # Adjust scroll position to keep zoom point centered
+                scale_ratio = new_scale / old_scale
+                new_scroll_x = zoom_x * scale_ratio - mouse_pos.x()
+                new_scroll_y = zoom_y * scale_ratio - mouse_pos.y()
+                
+                self.horizontalScrollBar().setValue(int(new_scroll_x))
+                self.verticalScrollBar().setValue(int(new_scroll_y))
                 
             event.accept()
         else:
@@ -329,3 +358,38 @@ class ImageViewer(QScrollArea):
         """Reset zoom to 100%"""
         self.scale_factor = 1.0
         self.update_display()
+        
+    def zoom_in(self):
+        """Zoom in by a fixed amount"""
+        new_scale = self.scale_factor * 1.25
+        new_scale = min(self.max_scale, new_scale)
+        if new_scale != self.scale_factor:
+            self.scale_factor = new_scale
+            self.update_display()
+            
+    def zoom_out(self):
+        """Zoom out by a fixed amount"""
+        new_scale = self.scale_factor / 1.25
+        new_scale = max(self.min_scale, new_scale)
+        if new_scale != self.scale_factor:
+            self.scale_factor = new_scale
+            self.update_display()
+    
+    def get_zoom_level(self):
+        """Get current zoom level as percentage"""
+        return int(self.scale_factor * 100)
+        
+    def set_zoom_level(self, percentage):
+        """Set zoom level by percentage (e.g., 150 for 150%)"""
+        new_scale = percentage / 100.0
+        new_scale = max(self.min_scale, min(self.max_scale, new_scale))
+        if new_scale != self.scale_factor:
+            self.scale_factor = new_scale
+            self.update_display()
+            print(f"ImageViewer: Set zoom to {percentage}%")
+    
+    def enable_drawing(self, enabled=True):
+        """Enable or disable direct drawing on image viewer"""
+        # This connects to your existing BrushEditor
+        # You might want to add drawing overlay functionality here
+        print(f"ImageViewer: Drawing mode {'enabled' if enabled else 'disabled'}")

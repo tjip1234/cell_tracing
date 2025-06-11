@@ -229,15 +229,31 @@ class CellTracingMainWindow(QMainWindow):
         layout = QVBoxLayout(postprocess_group)
         
         # Skeletonization
-        skel_layout = QHBoxLayout()
+        skel_layout = QVBoxLayout()
+        
+        # Method selection
+        method_layout = QHBoxLayout()
+        method_layout.addWidget(QLabel("Method:"))
+        self.skel_method_combo = QComboBox()
+        self.skel_method_combo.addItems(["gentle", "zhang", "lee", "watershed"])
+        method_layout.addWidget(self.skel_method_combo)
+        skel_layout.addLayout(method_layout)
+        
+        # Smoothing level
+        smooth_layout = QHBoxLayout()
+        smooth_layout.addWidget(QLabel("Smoothing:"))
+        self.smoothing_combo = QComboBox()
+        self.smoothing_combo.addItems(["light", "medium", "heavy", "none"])
+        self.smoothing_combo.setCurrentText("medium")
+        smooth_layout.addWidget(self.smoothing_combo)
+        skel_layout.addLayout(smooth_layout)
+        
+        # Skeletonize button
         self.skeletonize_btn = QPushButton("Skeletonize")
         self.skeletonize_btn.clicked.connect(self.run_skeletonization)
         self.skeletonize_btn.setEnabled(False)
         skel_layout.addWidget(self.skeletonize_btn)
         
-        self.skel_method_combo = QComboBox()
-        self.skel_method_combo.addItems(["zhang", "lee"])
-        skel_layout.addWidget(self.skel_method_combo)
         layout.addLayout(skel_layout)
         
         # Endpoint connection
@@ -312,8 +328,68 @@ class CellTracingMainWindow(QMainWindow):
         
         layout.addWidget(brush_group)
         
+        # Manual Processing Controls
+        processing_group = QGroupBox("Manual Processing")
+        processing_layout = QVBoxLayout(processing_group)
+        
+        # Manual Skeletonization
+        skel_layout = QVBoxLayout()
+        
+        # Method and smoothing for manual too
+        method_layout = QHBoxLayout()
+        method_layout.addWidget(QLabel("Method:"))
+        self.manual_skel_method_combo = QComboBox()
+        self.manual_skel_method_combo.addItems(["gentle", "zhang", "lee", "watershed"])
+        method_layout.addWidget(self.manual_skel_method_combo)
+        skel_layout.addLayout(method_layout)
+        
+        smooth_layout = QHBoxLayout()
+        smooth_layout.addWidget(QLabel("Smoothing:"))
+        self.manual_smoothing_combo = QComboBox()
+        self.manual_smoothing_combo.addItems(["light", "medium", "heavy", "none"])
+        self.manual_smoothing_combo.setCurrentText("medium")
+        smooth_layout.addWidget(self.manual_smoothing_combo)
+        skel_layout.addLayout(smooth_layout)
+        
+        self.manual_skeletonize_btn = QPushButton("Skeletonize Current Mask")
+        self.manual_skeletonize_btn.clicked.connect(self.manual_skeletonize)
+        self.manual_skeletonize_btn.setEnabled(False)
+        skel_layout.addWidget(self.manual_skeletonize_btn)
+        
+        processing_layout.addLayout(skel_layout)
+        
+        # Manual Endpoint Connection
+        connect_layout = QHBoxLayout()
+        self.manual_connect_btn = QPushButton("Connect Endpoints")
+        self.manual_connect_btn.clicked.connect(self.manual_connect_endpoints)
+        self.manual_connect_btn.setEnabled(False)
+        connect_layout.addWidget(self.manual_connect_btn)
+        processing_layout.addLayout(connect_layout)
+        
+        # Connection parameters for manual editing
+        params_layout = QVBoxLayout()
+        
+        max_dist_layout = QHBoxLayout()
+        max_dist_layout.addWidget(QLabel("Max Distance:"))
+        self.manual_max_distance_spin = QSpinBox()
+        self.manual_max_distance_spin.setRange(5, 100)
+        self.manual_max_distance_spin.setValue(25)
+        max_dist_layout.addWidget(self.manual_max_distance_spin)
+        params_layout.addLayout(max_dist_layout)
+        
+        iter_layout = QHBoxLayout()
+        iter_layout.addWidget(QLabel("Iterations:"))
+        self.manual_iterations_spin = QSpinBox()
+        self.manual_iterations_spin.setRange(1, 10)
+        self.manual_iterations_spin.setValue(3)
+        iter_layout.addWidget(self.manual_iterations_spin)
+        params_layout.addLayout(iter_layout)
+        
+        processing_layout.addLayout(params_layout)
+        layout.addWidget(processing_group)
+        
         # Editing controls
-        controls_group = QGroupBox("Controls")
+        controls_group = QGroupBox("Edit Controls")
         controls_layout = QVBoxLayout(controls_group)
         
         self.undo_btn = QPushButton("Undo")
@@ -364,6 +440,48 @@ class CellTracingMainWindow(QMainWindow):
         parent.addWidget(image_frame)
         
         layout = QVBoxLayout(image_frame)
+        
+        # Zoom controls toolbar
+        zoom_layout = QHBoxLayout()
+        
+        # Zoom buttons
+        self.zoom_in_btn = QPushButton("Zoom In")
+        self.zoom_in_btn.setMaximumWidth(80)
+        self.zoom_in_btn.clicked.connect(self.zoom_in)
+        zoom_layout.addWidget(self.zoom_in_btn)
+        
+        self.zoom_out_btn = QPushButton("Zoom Out")
+        self.zoom_out_btn.setMaximumWidth(80)
+        self.zoom_out_btn.clicked.connect(self.zoom_out)
+        zoom_layout.addWidget(self.zoom_out_btn)
+        
+        self.fit_window_btn = QPushButton("Fit Window")
+        self.fit_window_btn.setMaximumWidth(90)
+        self.fit_window_btn.clicked.connect(self.fit_to_window)
+        zoom_layout.addWidget(self.fit_window_btn)
+        
+        self.reset_zoom_btn = QPushButton("100%")
+        self.reset_zoom_btn.setMaximumWidth(60)
+        self.reset_zoom_btn.clicked.connect(self.reset_zoom)
+        zoom_layout.addWidget(self.reset_zoom_btn)
+        
+        # Zoom level display
+        self.zoom_label = QLabel("100%")
+        self.zoom_label.setMinimumWidth(50)
+        self.zoom_label.setStyleSheet("font-weight: bold; padding: 4px;")
+        zoom_layout.addWidget(self.zoom_label)
+        
+        # Drawing mode toggle
+        zoom_layout.addWidget(QLabel("|"))  # Separator
+        
+        self.drawing_mode_btn = QPushButton("Enable Drawing")
+        self.drawing_mode_btn.setCheckable(True)
+        self.drawing_mode_btn.setMaximumWidth(120)
+        self.drawing_mode_btn.toggled.connect(self.toggle_drawing_mode)
+        zoom_layout.addWidget(self.drawing_mode_btn)
+        
+        zoom_layout.addStretch()
+        layout.addLayout(zoom_layout)
         
         # Image viewer with brush editor
         self.image_viewer = ImageViewer()
@@ -427,6 +545,29 @@ class CellTracingMainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
+        # View menu
+        view_menu = menubar.addMenu('View')
+        
+        zoom_in_action = QAction('Zoom In', self)
+        zoom_in_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Plus))
+        zoom_in_action.triggered.connect(self.zoom_in)
+        view_menu.addAction(zoom_in_action)
+        
+        zoom_out_action = QAction('Zoom Out', self)
+        zoom_out_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Minus))
+        zoom_out_action.triggered.connect(self.zoom_out)
+        view_menu.addAction(zoom_out_action)
+        
+        fit_action = QAction('Fit to Window', self)
+        fit_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_0))
+        fit_action.triggered.connect(self.fit_to_window)
+        view_menu.addAction(fit_action)
+        
+        reset_action = QAction('Reset Zoom (100%)', self)
+        reset_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_1))
+        reset_action.triggered.connect(self.reset_zoom)
+        view_menu.addAction(reset_action)
+
     def setup_connections(self):
         """Setup signal connections"""
         # Brush editor connections
@@ -436,6 +577,52 @@ class CellTracingMainWindow(QMainWindow):
         # Brush editor signals
         self.brush_editor.mask_changed.connect(self.on_mask_edited)
         self.brush_editor.skeleton_changed.connect(self.on_skeleton_edited)
+
+    @Slot()
+    def zoom_in(self):
+        """Zoom in"""
+        if hasattr(self, 'image_viewer'):
+            self.image_viewer.zoom_in()
+            self.update_zoom_label()
+    
+    @Slot()
+    def zoom_out(self):
+        """Zoom out"""
+        if hasattr(self, 'image_viewer'):
+            self.image_viewer.zoom_out()
+            self.update_zoom_label()
+    
+    @Slot()
+    def fit_to_window(self):
+        """Fit image to window"""
+        if hasattr(self, 'image_viewer'):
+            self.image_viewer.fit_to_window()
+            self.update_zoom_label()
+    
+    @Slot()
+    def reset_zoom(self):
+        """Reset zoom to 100%"""
+        if hasattr(self, 'image_viewer'):
+            self.image_viewer.reset_zoom()
+            self.update_zoom_label()
+    
+    @Slot(bool)
+    def toggle_drawing_mode(self, enabled):
+        """Toggle drawing mode"""
+        if hasattr(self, 'image_viewer'):
+            self.image_viewer.enable_drawing(enabled)
+            if enabled:
+                self.drawing_mode_btn.setText("Disable Drawing")
+                self.log("Drawing mode enabled - click and drag to draw")
+            else:
+                self.drawing_mode_btn.setText("Enable Drawing")
+                self.log("Drawing mode disabled")
+    
+    def update_zoom_label(self):
+        """Update zoom level display"""
+        if hasattr(self, 'image_viewer') and hasattr(self, 'zoom_label'):
+            zoom_level = self.image_viewer.get_zoom_level()
+            self.zoom_label.setText(f"{zoom_level}%")
         
     def clear_all_data(self):
         """Clear all current data"""
@@ -596,7 +783,8 @@ class CellTracingMainWindow(QMainWindow):
         
         self.skeletonizer = Skeletonizer(
             self.current_mask, 
-            self.skel_method_combo.currentText()
+            self.skel_method_combo.currentText(),
+            self.smoothing_combo.currentText()
         )
         self.skeletonizer.finished.connect(self.on_skeletonization_finished)
         self.skeletonizer.progress.connect(self.log)
@@ -626,14 +814,42 @@ class CellTracingMainWindow(QMainWindow):
     def on_mask_edited(self):
         """Handle mask being edited"""
         self.current_mask = self.brush_editor.mask
+        # Enable manual processing buttons when we have a mask
+        self.manual_skeletonize_btn.setEnabled(self.current_mask is not None and np.any(self.current_mask > 0))
         self.update_export_buttons()
         
     @Slot()
     def on_skeleton_edited(self):
         """Handle skeleton being edited"""
         self.current_skeleton = self.brush_editor.skeleton
+        # Enable endpoint connection when we have a skeleton
+        self.manual_connect_btn.setEnabled(self.current_skeleton is not None and np.any(self.current_skeleton > 0))
         self.update_export_buttons()
+
+    @Slot(np.ndarray, dict)
+    def on_ilastik_finished(self, refined_mask, analysis_results):
+        """Handle Ilastik processing completion"""
+        self.current_mask = refined_mask
+        self.image_viewer.set_mask(refined_mask)
+        self.brush_editor.set_mask(refined_mask)  # This allows manual editing of Ilastik results
         
+        # If skeleton was found, use it
+        if 'best_result' in analysis_results:
+            self.current_skeleton = analysis_results['best_result']['skeleton']
+            self.image_viewer.set_skeleton(self.current_skeleton)
+            self.brush_editor.set_skeleton(self.current_skeleton)
+            self.connect_endpoints_btn.setEnabled(True)
+            self.manual_connect_btn.setEnabled(True)  # Enable manual endpoint connection too
+            
+        self.progress_bar.setVisible(False)
+        self.process_ilastik_btn.setEnabled(True)
+        self.skeletonize_btn.setEnabled(True)
+        self.manual_skeletonize_btn.setEnabled(True)  # Enable manual skeletonization
+        
+        self.update_display()
+        self.update_export_buttons()
+        self.log("Ilastik refinement completed - you can now manually edit the mask and skeleton")
+
     @Slot(np.ndarray, np.ndarray)
     def on_unet_finished(self, mask, probability_map):
         """Handle UNet processing completion"""
@@ -644,68 +860,92 @@ class CellTracingMainWindow(QMainWindow):
         
         print(f"MainWindow: Setting mask in image viewer...")
         self.image_viewer.set_mask(mask)
-        self.brush_editor.set_mask(mask)
+        self.brush_editor.set_mask(mask)  # This allows manual editing of UNet results
         
         self.progress_bar.setVisible(False)
         self.process_unet_btn.setEnabled(True)
         self.skeletonize_btn.setEnabled(True)
+        self.manual_skeletonize_btn.setEnabled(True)  # Enable manual skeletonization
         
         self.update_display()
         self.update_export_buttons()
-        self.log("UNet processing completed")
-        
-    @Slot(np.ndarray, dict)
-    def on_ilastik_finished(self, refined_mask, analysis_results):
-        """Handle Ilastik processing completion"""
-        self.current_mask = refined_mask
-        self.image_viewer.set_mask(refined_mask)
-        self.brush_editor.set_mask(refined_mask)
-        
-        # If skeleton was found, use it
-        if 'best_result' in analysis_results:
-            self.current_skeleton = analysis_results['best_result']['skeleton']
-            self.image_viewer.set_skeleton(self.current_skeleton)
-            self.brush_editor.set_skeleton(self.current_skeleton)
-            self.connect_endpoints_btn.setEnabled(True)
+        self.log("UNet processing completed - you can now manually edit the mask or skeletonize it")
+
+    # Manual processing methods
+    @Slot()
+    def manual_skeletonize(self):
+        """Run skeletonization on current mask from manual editing"""
+        if self.current_mask is None:
+            self.log("No mask available for skeletonization")
+            return
             
-        self.progress_bar.setVisible(False)
-        self.process_ilastik_btn.setEnabled(True)
-        self.skeletonize_btn.setEnabled(True)
+        self.progress_bar.setVisible(True)
+        self.manual_skeletonize_btn.setEnabled(False)
         
-        self.update_display()
-        self.update_export_buttons()
-        self.log("Ilastik refinement completed")
+        # Get the current mask from brush editor (includes any manual edits)
+        current_mask = self.brush_editor.mask if self.brush_editor.mask is not None else self.current_mask
         
+        self.skeletonizer = Skeletonizer(
+            current_mask, 
+            self.manual_skel_method_combo.currentText(),
+            self.manual_smoothing_combo.currentText()
+        )
+        self.skeletonizer.finished.connect(self.on_manual_skeletonization_finished)
+        self.skeletonizer.progress.connect(self.log)
+        self.skeletonizer.start()
+        
+    @Slot()
+    def manual_connect_endpoints(self):
+        """Run endpoint connection on current skeleton from manual editing"""
+        if self.current_skeleton is None:
+            self.log("No skeleton available for endpoint connection")
+            return
+            
+        self.progress_bar.setVisible(True)
+        self.manual_connect_btn.setEnabled(False)
+        
+        # Get the current skeleton from brush editor (includes any manual edits)
+        current_skeleton = self.brush_editor.skeleton if self.brush_editor.skeleton is not None else self.current_skeleton
+        
+        self.endpoint_connector = EndpointConnector(
+            current_skeleton,
+            self.manual_max_distance_spin.value(),
+            self.manual_iterations_spin.value()
+        )
+        self.endpoint_connector.finished.connect(self.on_manual_endpoint_connection_finished)
+        self.endpoint_connector.progress.connect(self.log)
+        self.endpoint_connector.start()
+
     @Slot(np.ndarray)
-    def on_skeletonization_finished(self, skeleton):
-        """Handle skeletonization completion"""
-        print(f"MainWindow: Skeletonization finished - skeleton shape: {skeleton.shape}")
+    def on_manual_skeletonization_finished(self, skeleton):
+        """Handle manual skeletonization completion"""
+        print(f"MainWindow: Manual skeletonization finished - skeleton shape: {skeleton.shape}")
         
         self.current_skeleton = skeleton
         self.image_viewer.set_skeleton(skeleton)
         self.brush_editor.set_skeleton(skeleton)
         
         self.progress_bar.setVisible(False)
-        self.skeletonize_btn.setEnabled(True)
-        self.connect_endpoints_btn.setEnabled(True)
+        self.manual_skeletonize_btn.setEnabled(True)
+        self.manual_connect_btn.setEnabled(True)
         
         self.update_display()
         self.update_export_buttons()
-        self.log("Skeletonization completed")
-        
+        self.log("Manual skeletonization completed")
+
     @Slot(np.ndarray, list)
-    def on_endpoint_connection_finished(self, connected_skeleton, connections):
-        """Handle endpoint connection completion"""
+    def on_manual_endpoint_connection_finished(self, connected_skeleton, connections):
+        """Handle manual endpoint connection completion"""
         self.current_skeleton = connected_skeleton
         self.image_viewer.set_skeleton(connected_skeleton)
         self.brush_editor.set_skeleton(connected_skeleton)
         
         self.progress_bar.setVisible(False)
-        self.connect_endpoints_btn.setEnabled(True)
+        self.manual_connect_btn.setEnabled(True)
         
         self.update_display()
         self.update_export_buttons()
-        self.log(f"Endpoint connection completed. Made {len(connections)} connections")
+        self.log(f"Manual endpoint connection completed. Made {len(connections)} connections")
         
     # Manual editing
     @Slot(int)

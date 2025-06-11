@@ -43,16 +43,41 @@ class BrushEditor(QObject):
         if mask is not None:
             self.mask = mask.copy()
             print(f"BrushEditor: Set mask - shape: {self.mask.shape}, range: [{self.mask.min()}, {self.mask.max()}]")
+            # Convert to binary if needed
+            if self.mask.dtype != np.uint8:
+                self.mask = (self.mask > 0.5).astype(np.uint8)
+    
+        # Ensure mask dimensions match image dimensions if we have an image
+            if self.image is not None:
+                image_height, image_width = self.image.shape[:2]
+                mask_height, mask_width = self.mask.shape[:2]
+                
+                if (mask_height, mask_width) != (image_height, image_width):
+                    print(f"BrushEditor: Resizing mask from {(mask_width, mask_height)} to match image {(image_width, image_height)}")
+                    from skimage.transform import resize
+                    self.mask = resize(self.mask, (image_height, image_width), preserve_range=True).astype(np.uint8)
+                    
             self.save_mask_state()
         else:
             self.mask = None
             print("BrushEditor: Cleared mask")
-            
+                
     def set_skeleton(self, skeleton):
         """Set the current skeleton"""
         if skeleton is not None:
             self.skeleton = skeleton.copy()
             print(f"BrushEditor: Set skeleton - shape: {self.skeleton.shape}")
+            
+            # Ensure skeleton dimensions match image dimensions if we have an image
+            if self.image is not None:
+                image_height, image_width = self.image.shape[:2]
+                skel_height, skel_width = self.skeleton.shape[:2]
+                
+                if (skel_height, skel_width) != (image_height, image_width):
+                    print(f"BrushEditor: Resizing skeleton from {(skel_width, skel_height)} to match image {(image_width, image_height)}")
+                    from skimage.transform import resize
+                    self.skeleton = resize(self.skeleton, (image_height, image_width), preserve_range=True).astype(np.uint8)
+                    
             self.save_skeleton_state()
         else:
             self.skeleton = None
@@ -102,26 +127,50 @@ class BrushEditor(QObject):
             return
             
         x, y = pos.x(), pos.y()
-        height, width = self.image.shape[:2]
+    
+        # Get the actual dimensions we need to work with
+        if self.current_tool == 'draw':
+            # For drawing, we need to ensure mask matches image dimensions
+            image_height, image_width = self.image.shape[:2]
+            
+            if self.mask is None:
+                self.mask = np.zeros((image_height, image_width), dtype=np.uint8)
+                print(f"BrushEditor: Created new mask with image dimensions: {image_width}x{image_height}")
+            elif self.mask.shape != (image_height, image_width):
+                # Resize mask to match image if needed
+                print(f"BrushEditor: Resizing mask from {self.mask.shape} to {(image_height, image_width)}")
+                from skimage.transform import resize
+                self.mask = resize(self.mask, (image_height, image_width), preserve_range=True).astype(np.uint8)
+                
+            height, width = image_height, image_width
+            
+        elif self.current_tool == 'erase':
+            # For erasing, use existing mask/skeleton dimensions
+            if self.mask is not None:
+                height, width = self.mask.shape[:2]
+            elif self.skeleton is not None:
+                height, width = self.skeleton.shape[:2]
+            else:
+                print("BrushEditor: No mask or skeleton to erase from")
+                return
+        else:
+            print(f"BrushEditor: Unknown tool: {self.current_tool}")
+            return
         
-        print(f"BrushEditor: Apply brush at ({x}, {y}), image size: {width}x{height}, tool: {self.current_tool}")
+        print(f"BrushEditor: Apply brush at ({x}, {y}), working dimensions: {width}x{height}, tool: {self.current_tool}")
         
         # Check bounds
         if not (0 <= x < width and 0 <= y < height):
-            print(f"BrushEditor: Position ({x}, {y}) out of bounds")
+            print(f"BrushEditor: Position ({x}, {y}) out of bounds for {width}x{height}")
             return
             
-        # Create brush mask
+        # Create brush mask with correct dimensions
         brush_mask = self.create_brush_mask(x, y, height, width)
         brush_pixel_count = np.sum(brush_mask)
-        print(f"BrushEditor: Created brush mask with {brush_pixel_count} pixels")
+        print(f"BrushEditor: Created brush mask {brush_mask.shape} with {brush_pixel_count} pixels")
         
         if self.current_tool == 'draw':
             # Drawing on mask
-            if self.mask is None:
-                self.mask = np.zeros((height, width), dtype=np.uint8)
-                print("BrushEditor: Created new mask")
-            
             old_mask_sum = np.sum(self.mask)
             self.mask[brush_mask] = 1
             new_mask_sum = np.sum(self.mask)
@@ -132,6 +181,11 @@ class BrushEditor(QObject):
         elif self.current_tool == 'erase':
             # Erasing from mask and skeleton
             if self.mask is not None:
+                # Ensure brush mask matches mask dimensions
+                if brush_mask.shape != self.mask.shape[:2]:
+                    print(f"BrushEditor: Brush mask shape {brush_mask.shape} doesn't match mask shape {self.mask.shape[:2]}")
+                    return
+                    
                 old_mask_sum = np.sum(self.mask)
                 self.mask[brush_mask] = 0
                 new_mask_sum = np.sum(self.mask)
@@ -139,6 +193,11 @@ class BrushEditor(QObject):
                 self.mask_changed.emit()
                 
             if self.skeleton is not None:
+                # Ensure brush mask matches skeleton dimensions  
+                if brush_mask.shape != self.skeleton.shape[:2]:
+                    print(f"BrushEditor: Brush mask shape {brush_mask.shape} doesn't match skeleton shape {self.skeleton.shape[:2]}")
+                    return
+                    
                 old_skel_sum = np.sum(self.skeleton)
                 self.skeleton[brush_mask] = 0
                 new_skel_sum = np.sum(self.skeleton)
