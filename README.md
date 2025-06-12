@@ -1,14 +1,13 @@
 # Cell Tracing Application
 
-A comprehensive tool for cell image analysis and tracing using neural networks, manual editing, and automated processing pipelines.
+A tool for cell image tracing using a U-net neural network or refine your Ilastik output.
 
 ## Features
 
 - **Neural Network Processing**: UNet-based cell segmentation
-- **Ilastik Integration**: Advanced segmentation refinement
+- **Ilastik Integration**: Ilastik segmentation refinement
 - **Manual Editing**: Interactive brush tools for mask and skeleton editing
 - **Skeletonization**: Multiple algorithms including gentle, zhang, lee, and watershed methods
-- **Zoom & Pan**: Smooth zooming with Ctrl+Mouse Wheel, fit-to-window functionality
 - **SVG Export**: Export processed results as scalable vector graphics
 - **Endpoint Connection**: Automatic connection of skeleton fragments
 
