@@ -92,12 +92,12 @@ pip install torch torchvision
    - Switch between Draw/Erase tools
 
 4. **Skeletonization**:
-   - Choose method: "gentle" (recommended), "zhang", "lee", or "watershed"
-   - Set smoothing level: "light", "medium", "heavy", or "none"
+   - Choose method: "gentle", "zhang"(recommended), "lee", or "watershed"
+   - Set smoothing level: "light", "medium", "heavy"(recommended), or "none"
    - Click "Skeletonize Current Mask"
 5. **Connect Endpoints**:
    - Only useful for zhang and lee methods
-   - default settings are usually fine
+   - Default settings are usually fine
 6. **Export Results**:
    - Go to "Export" tab
    - Click "Export SVG" to save results and refine manually later
