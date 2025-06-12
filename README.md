@@ -85,7 +85,7 @@ pip install torch torchvision
    - Set threshold (0.5 recommended)
    - Click "Process with UNet"
 
-3. **Manual Editing**:
+3. **Manual Editing** (kinda sucks currently):
    - Switch to "Manual Edit" tab
    - Use brush tools to refine the mask
    - Adjust brush size with slider
@@ -95,10 +95,12 @@ pip install torch torchvision
    - Choose method: "gentle" (recommended), "zhang", "lee", or "watershed"
    - Set smoothing level: "light", "medium", "heavy", or "none"
    - Click "Skeletonize Current Mask"
-
-5. **Export Results**:
+5. **Connect Endpoints**:
+   - Only useful for zhang and lee methods
+   - default settings are usually fine
+6. **Export Results**:
    - Go to "Export" tab
-   - Click "Export SVG" to save results
+   - Click "Export SVG" to save results and refine manually later
 
 ### Controls
 
@@ -137,14 +139,10 @@ pip install torch torchvision
 4. **Memory issues with large images**:
    - Consider resizing images before processing
    - Close other applications to free memory
-   - Use "light" smoothing for large images
 
 ### Performance Tips
 
-- **For better skeletonization**: Use "gentle" method with "medium" smoothing
-- **For faster processing**: Use "zhang" method with "light" smoothing
-- **For noisy images**: Use "gentle" method with "heavy" smoothing
-- **For clean manual masks**: Use "watershed" method with "light" smoothing
+- **For better skeletonization**: Use "zhang" with "heavy" smoothing and then use the connect endpoints option
 
 ## File Structure
 
@@ -180,14 +178,6 @@ See `requirements.txt` for complete list. Key dependencies:
 
 [Add your license information here]
 
-## Support
-
-For issues or questions:
-1. Check the troubleshooting section above
-2. Ensure all dependencies are correctly installed
-3. Try running with different image formats/sizes
-4. Check console output for error messages
-
 ## Development
 
 To contribute or modify:
@@ -195,7 +185,6 @@ To contribute or modify:
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Test it (if you want to lol)
 5. Submit a pull request
 
-The codebase is modular with separate classes for each processing step, making it easy to extend or modify individual components.

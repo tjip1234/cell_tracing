@@ -1,2 +1,4 @@
 /.venv
 /__pycache__
+/widgets/__pycache__
+/processing/__pycache__
